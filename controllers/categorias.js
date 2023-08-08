@@ -7,12 +7,11 @@ const { bindAll } = require("express-validator/src/utils");
 const obtenerCategorias = async (req = request, res = response) => {
   const { limite = 6, desde = 0 } = req.query;
   const query = { estado: true };
-  const usuario = await Categoria.find().populate("usuario").exec();
-
   const [total, categorias] = await Promise.all([
     Categoria.countDocuments(query),
-    (Categoria.usuario = usuario),
-    Categoria.find(query).skip(Number(desde)).limit(Number(limite)),
+    Categoria.find(query).populate('usuario',{
+      nombre:1
+    }).skip(Number(desde)).limit(Number(limite)),
   ]);
 
   res.json({
@@ -26,8 +25,11 @@ const obtenerCategoria = async (req = request, res = response) => {
   // Leer y guardar el ID que me pasan por la URL
   const id = req.params.id;
   // Buscar en BD si existe y que devuelve el documento
-  const categoria = await Categoria.findById(id);
+  const categoria = await Categoria.findById(id).populate('usuario',{
+    nombre:1
+  });
   if (categoria) {
+    // Agregando populate
     res.status(200).json({
       categoria,
     });
@@ -65,13 +67,22 @@ const actualizarCategoria = async (req = request, res = response) => {
     const {estado,usuario,_id,...resto} = req.body
     // Buscar en BD si existe y que devuelve el documento
     const categoria = await Categoria.findById(id);
-    if (categoria) {
-    // Cambiar solo el nombre
-    const modificar = await Categoria.findByIdAndUpdate(id, resto)
-      res.status(200).json({
-        modificar
-      });
+    try {
+      if (categoria) {
+        // Cambiar solo el nombre
+        const modificar = await Categoria.findByIdAndUpdate(id, resto)
+          res.status(200).json({
+            modificar
+          });
+        }
+    } catch (error) {
+      res.status(400).json({
+        msg: ` Nombre de categoria invalido, ya se encuentra registrado `
+      })      
     }
+    
+      
+    
   };
 
   // Eliminar
@@ -79,6 +90,8 @@ const actualizarCategoria = async (req = request, res = response) => {
 
     const {id} = req.params;
    // borrar cambiando el estado
+   //const {usuario } = Categoria 
+   //console.log({usuario})
    const categoria = await Categoria.findByIdAndUpdate(id, {estado:false});
    const catAuten = categoria
 
@@ -91,4 +104,5 @@ module.exports = {
   obtenerCategoria,
   actualizarCategoria,
   borrarCategoria
+
 };
